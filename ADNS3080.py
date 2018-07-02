@@ -44,3 +44,5 @@ if __name__ == "__main__":
     this = ADNS3080()
     this.wait()
     this.initializeSensor()
+    while(1):
+        print format(this.readReg(2), '#010b'), this.readReg(5),  this.readReg(3), this.readReg(4)
