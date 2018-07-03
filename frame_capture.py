@@ -27,6 +27,7 @@ initTime = time.time()
 
 while 1:
     try:
+        #print this.getSQUAL()
         rawdata = this.frameCapture()
         #capTime = time.time()
         print "Got data..."

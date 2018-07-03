@@ -5,12 +5,12 @@ import adns3080_srom as srom
 
 class ADNS3080():
     def readReg(self, address):
-        result = self.spi.xfer2([address, 0], 1000000, 100)
+        result = self.spi.xfer2([address, 0], 50000,10)
         return result[1]
     
     def writeReg(self, address, data):
         address = address | 0b10000000
-        self.spi.xfer2([address, data], 1000000, 100)
+        self.spi.xfer2([address, data], 50000, 10)
 
     def __init__(self, rstpin=22, bus=0, device=0):
         self.rstpin = rstpin
@@ -18,9 +18,9 @@ class ADNS3080():
         GPIO.setup(rstpin, GPIO.OUT)
         GPIO.output(rstpin, GPIO.LOW)
         self.spi = spidev.SpiDev()
-        self.spi.mode = 3
         #self.spi.max_speed_hz = 1953000
         self.spi.open(bus, device)
+        self.spi.mode = 3
         
     def resetDevice(self):
         GPIO.output(self.rstpin, GPIO.HIGH)
@@ -35,7 +35,7 @@ class ADNS3080():
         self.writeReg(0x24, 0x88)
         time.sleep(0.1)
         self.writeReg(0x14, 0x18)
-        self.spi.xfer2([0x60]+SROM, 1000000, 100)
+        self.spi.xfer2([0x60]+SROM, 100000, 10)
         time.sleep(1)
         print "SROM ID:", self.readReg(0x1f)
 
@@ -89,6 +89,7 @@ if __name__ == "__main__":
     this.wait()
     this.initializeSensor()
     #this.downloadSROM(srom.srom)
-    print this.frameCapture()
-    #while(1):
-        #print format(this.readReg(2), '#010b'), this.readReg(5),  this.readReg(3), this.readReg(4)
+    #print this.frameCapture()
+    while(1):
+        print this.readReg(0), this.readReg(1), this.readReg(5), format(this.readReg(2), '#010b'),  this.readReg(3), this.readReg(4)
+        time.sleep(0.1)
