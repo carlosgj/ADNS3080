@@ -22,11 +22,14 @@ class ADNS3080():
         #self.spi.max_speed_hz = 1953000
         self.spi.open(bus, device)
         
-    def downloadSROM(self, SROM):
+    def resetDevice(self):
         GPIO.output(self.rstpin, GPIO.HIGH)
-        time.sleep(0.1)
+        time.sleep(0.01)
         GPIO.output(self.rstpin, GPIO.LOW)
-        time.sleep(0.1)
+        time.sleep(0.01)
+
+    def downloadSROM(self, SROM):
+        self.resetDevice()
         self.writeReg(0x20, 0x44)
         self.writeReg(0x23, 0x07)
         self.writeReg(0x24, 0x88)
@@ -45,9 +48,7 @@ class ADNS3080():
 
     def initializeSensor(self):
         #Toggle reset
-        GPIO.output(self.rstpin, GPIO.HIGH)
-        time.sleep(0.1)
-        GPIO.output(self.rstpin, GPIO.LOW)
+        self.resetDevice()
         time.sleep(0.1)
         id = self.readReg(0)
         id = self.readReg(0)
@@ -57,16 +58,14 @@ class ADNS3080():
         print "SROM ID:", self.readReg(0x1f)
 
     def runSelfTest(self):
-        GPIO.output(self.rstpin, GPIO.HIGH)
-        time.sleep(0.1)
-        GPIO.output(self.rstpin, GPIO.LOW)
-        time.sleep(0.1)
+        self.resetDevice()
         currentRegVal = self.readReg(0x0a)
         self.writeReg(0x0a, currentRegVal | 0b00100000)
         time.sleep(2.)
         print "%x, %x"%(self.readReg(0x0d), self.readReg(0x0c))
 
     def frameCapture(self):
+        self.resetDevice()
         self.writeReg(0x13, 0x83)
         time.sleep(0.1)
         outputData = self.spi.xfer([0x40]+[0]*900, 1000000, 100)
@@ -80,7 +79,7 @@ class ADNS3080():
             else:
                 if i > 0:
                     print "WARNING: Bit 6 of byte %d of frame data is set."%i
-            outputData[i] = byte & 0b01111111
+            outputData[i] = byte & 0b00111111
         return outputData
         
         
