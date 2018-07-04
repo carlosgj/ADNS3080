@@ -2,15 +2,16 @@ import spidev
 import RPi.GPIO as GPIO 
 import time 
 import adns3080_srom as srom
+import struct
 
 class ADNS3080():
     def readReg(self, address):
-        result = self.spi.xfer2([address, 0], 50000,10)
+        result = self.spi.xfer2([address, 0], 50000)
         return result[1]
     
     def writeReg(self, address, data):
         address = address | 0b10000000
-        self.spi.xfer2([address, data], 50000, 10)
+        self.spi.xfer2([address, data], 50000)
 
     def __init__(self, rstpin=22, bus=0, device=0):
         self.rstpin = rstpin
@@ -30,12 +31,16 @@ class ADNS3080():
 
     def downloadSROM(self, SROM):
         self.resetDevice()
+        time.sleep(0.1)
         self.writeReg(0x20, 0x44)
+        time.sleep(0.1)
         self.writeReg(0x23, 0x07)
+        time.sleep(0.1)
         self.writeReg(0x24, 0x88)
         time.sleep(0.1)
         self.writeReg(0x14, 0x18)
-        self.spi.xfer2([0x60]+SROM, 100000, 10)
+        time.sleep(0.1)
+        self.spi.xfer([0x60]+SROM, 50000)
         time.sleep(1)
         print "SROM ID:", self.readReg(0x1f)
 
@@ -61,8 +66,13 @@ class ADNS3080():
         self.resetDevice()
         currentRegVal = self.readReg(0x0a)
         self.writeReg(0x0a, currentRegVal | 0b00100000)
-        time.sleep(2.)
-        print "%x, %x"%(self.readReg(0x0d), self.readReg(0x0c))
+        time.sleep(1)
+        result = (self.readReg(0x0d)<<8) | self.readReg(0x0c)
+        if result == 0x1bbf:
+            return True
+        else:
+            print "ERROR: Self-test failed"
+            return False
 
     def frameCapture(self):
         self.resetDevice()
@@ -82,7 +92,17 @@ class ADNS3080():
             outputData[i] = byte & 0b00111111
         return outputData
         
-        
+    def getMotion(self):
+        #TODO: may want to redo this with motion_burst        
+        motionByte = self.readReg(2)
+        x = self.readReg(3)
+        y = self.readReg(4)
+        x = struct.unpack('b', struct.pack('B', x))[0]
+        y = struct.unpack('b', struct.pack('B', y))[0]
+        resolution = ((motionByte & 1) != 0)
+        overflow = ((motionByte & 0b10000) != 0)
+        motion = ((motionByte & 0b10000000) != 0)
+        return (motion, overflow, resolution, x, y)
 
 if __name__ == "__main__":
     this = ADNS3080()
@@ -90,6 +110,7 @@ if __name__ == "__main__":
     this.initializeSensor()
     #this.downloadSROM(srom.srom)
     #print this.frameCapture()
+    #this.runSelfTest()
     while(1):
-        print this.readReg(0), this.readReg(1), this.readReg(5), format(this.readReg(2), '#010b'),  this.readReg(3), this.readReg(4)
+        print this.readReg(0), this.readReg(1), this.readReg(5), this.getMotion()
         time.sleep(0.1)
